@@ -1,9 +1,9 @@
-function draw_particles(x, t)
+function draw_particles(x, rst)
 	% define persistent variables 
 	persistent scatter_plot_handle;
 
 	% first time function is called, initialize plot
-	if t == 0
+	if rst
 		figure(1)
 		scatter_plot_handle = scatter_plot(x(1, :), x(2, :), []);
 
@@ -11,6 +11,7 @@ function draw_particles(x, t)
 	else
 		scatter_plot(x(1, :), x(2, :), scatter_plot_handle);
 	end
+	drawnow;
 end
 function handle = scatter_plot(x, y, handle)
 	if isempty(handle)

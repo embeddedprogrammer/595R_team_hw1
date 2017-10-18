@@ -1,9 +1,8 @@
-function draw_unicycle(uu, P)
+function draw_unicycle(xx, rst, P)
 	% process inputs to function
-	x       = uu(1);     
-	y       = uu(2);
-	theta   = uu(3);
-	t       = uu(4);
+	x       = xx(1);     
+	y       = xx(2);
+	theta   = xx(3);
 
 	% define persistent variables 
 	persistent circle_handle;
@@ -11,7 +10,7 @@ function draw_unicycle(uu, P)
 	r = .7;
 
 	% first time function is called, initialize plot and persistent vars
-	if t == 0
+	if rst
 		figure(1)
 		clf
 		circle_handle = drawCircle(x, y, r, []);
@@ -19,7 +18,7 @@ function draw_unicycle(uu, P)
 		line_handle = drawLine(x, y, theta, r, []);
 		drawLandmarks(P.landmarks(1, :), P.landmarks(2, :))
 		grid on
-		axis([-10 10 -10 10]);
+		axis([0 8 -4 20]);
 
     % at every other time step, redraw spring and box
 	else

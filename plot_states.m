@@ -1,4 +1,4 @@
-function plot_states(uu)
+function plot_states()
 	x        = uu(1);
 	y        = uu(2);
 	theta    = 180/pi*uu(3);
