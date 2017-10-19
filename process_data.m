@@ -1,5 +1,11 @@
 param;
 load('processed_data');
+
+% remove outliers
+% There are 7 measurements which have depth of less than 6mm. This is clearly impossible.
+bad_idxs = l_depth < 0.01;
+l_depth(bad_idxs) = nan;
+l_bearing(bad_idxs) = nan;
 l_idx = 1;
 rst_meas = true;
 for i = 1:length(odom_t)

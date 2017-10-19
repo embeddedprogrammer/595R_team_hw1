@@ -18,7 +18,8 @@ function draw_unicycle(xx, rst, P)
 		history_handle = plot_var(x, y, 'r', []);
 		drawLandmarks(P.landmarks(1, :), P.landmarks(2, :))
 		grid on
-		axis([0 8 -4 20]);
+		%axis([0 8 -4 20]);
+		axis([-8 16 -4 20]);
 
     % at every other time step, redraw
 	else

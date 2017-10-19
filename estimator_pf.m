@@ -6,7 +6,8 @@ function [x_, xhat_, P_, err, mahalDist, unique_samples] = estimator_pf(y, u, t,
 		% initialize particles by randomly sampling from a uniform distribution
 		rnd = @(len, min, max)  min + rand(1, len)*(max - min);
 		n_p = 1000;
-		x = PP.x0 + [rnd(n_p, -1, 1); rnd(n_p, -1, 1); rnd(n_p, -pi, pi)];
+		%x = PP.x0 + [rnd(n_p, -1, 1); rnd(n_p, -10, 10); rnd(n_p, -pi, pi)];
+		x = [rnd(n_p, 0, 10); rnd(n_p, -1, 15); rnd(n_p, -pi, pi)];
 		[xhat, P] = compute_covariance(x);
 	end
 	y = reshape(y, 2, n);
@@ -50,10 +51,10 @@ function [x, xhat, P, errs, mahalDists, unique_samples] = particleFilter(x, P, y
 				%R = diag([(y(1, i)*PP.alpha_r).^2, PP.sigma_phi.^2]);
 				[yhat, C] = h_dhdx(xhat, u, PP, i);
 				S = C*P*C' + R;
-				err = y(:, i) - yhat;
+				err = angleMod(y(:, i) - yhat);
 				errs = [errs abs(err)];
 				mahalDist = sqrt(err'*inv(S)*err);
-				if(mahalDist > 10)
+				if(mahalDist > 5)
 					y(:, i) = nan;
 				end
 				mahalDists = [mahalDists sqrt(err'*inv(S)*err)];
@@ -72,7 +73,8 @@ function [x, xhat, P, errs, mahalDists, unique_samples] = particleFilter(x, P, y
 					%R = diag([(y(1, j)*PP.alpha_r).^2, PP.sigma_phi.^2]);
 					yhat = h(x(:, i), 0, PP, j);
 					d = size(x, 1);
-					mahalDistSqr = (y(:, j) - yhat)'*inv(S)*(y(:, j) - yhat);
+					err = angleMod(y(:, j) - yhat);
+					mahalDistSqr = err'*inv(S)*err;
 					logpdf = -1/2*log((2*pi)^d*det(R)) - 1/2*mahalDistSqr;
 					%pdf = 1/sqrt((2*pi)^d*det(R))*exp(-1/2*mahalDistSqr);
 					%pdf = mvnpdf(y(:, j)', yhat', S);
@@ -113,6 +115,9 @@ function [x, xhat, P, errs, mahalDists, unique_samples] = particleFilter(x, P, y
 		
 	% calculate new covariance
 	[xhat, P] = compute_covariance(x);
+end
+function angleDiff = angleMod(angleDiff)
+	angleDiff = mod(angleDiff + pi, 2*pi) - pi;
 end
 function [mean, covariance] = compute_covariance(x)
 	mean = sum(x, 2) / size(x, 2);
