@@ -55,7 +55,7 @@ function [x, xhat, P, errs, mahalDists, unique_samples] = particleFilter(x, P, y
 				errs = [errs abs(err)];
 				mahalDist = sqrt(err'*inv(S)*err);
 				if(mahalDist > 5)
-					y(:, i) = nan;
+					%y(:, i) = nan;
 				end
 				mahalDists = [mahalDists sqrt(err'*inv(S)*err)];
 			end
@@ -65,7 +65,7 @@ function [x, xhat, P, errs, mahalDists, unique_samples] = particleFilter(x, P, y
 
 		% calculate weights for each x_i using w_i = P(z | x_i).
 		n = size(x, 2);
-		w = zeros(n, 1);
+		w = ones(n, 1);
 		for i = 1:n
 			S = R; %is this right?
 			for j = 1:size(PP.landmarks, 2)
@@ -75,17 +75,19 @@ function [x, xhat, P, errs, mahalDists, unique_samples] = particleFilter(x, P, y
 					d = size(x, 1);
 					err = angleMod(y(:, j) - yhat);
 					mahalDistSqr = err'*inv(S)*err;
-					logpdf = -1/2*log((2*pi)^d*det(R)) - 1/2*mahalDistSqr;
-					%pdf = 1/sqrt((2*pi)^d*det(R))*exp(-1/2*mahalDistSqr);
-					%pdf = mvnpdf(y(:, j)', yhat', S);
-					w(i) = w(i) + logpdf;
+					%logpdf = -1/2*log((2*pi)^d*det(R)) - 1/2*mahalDistSqr;
+					
+					uniform_rv_area = 7*pi; %area calculations, given max 7 meter depth and bearing between -pi/2 to pi/2
+					clutter_prob = 0.016; %approx 1.6% of the measurements are spurious
+					gaussian_pdf = (1-clutter_prob)/sqrt((2*pi)^d*det(R))*exp(-1/2*mahalDistSqr);
+					uniform_pdf = clutter_prob/uniform_rv_area;
+					total_pdf = gaussian_pdf + uniform_pdf;
+					w(i) = w(i)*total_pdf;
 				end
 			end
 		end
 
 		% normalize weights
-		w = w - max(w);
-		w = exp(w);
 		w = w / sum(w);
 
 		% resample using low-variance random sampler (spin wheel only once)
