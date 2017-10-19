@@ -1,4 +1,4 @@
-function [x_, xhat_, P_] = estimator_pf(y, u, t, rst, PP)
+function [x_, xhat_, P_, err, mahalDist, unique_samples] = estimator_pf(y, u, t, rst, PP)
 	% process inputs to function
 	n = size(PP.landmarks, 2);
 	persistent x xhat P tLast;
@@ -11,13 +11,16 @@ function [x_, xhat_, P_] = estimator_pf(y, u, t, rst, PP)
 	end
 	y = reshape(y, 2, n);
 	Ts = t - tLast;
-	[x, xhat, P] = particleFilter(x, P, y, u, PP, Ts);
+	[x, xhat, P, err, mahalDist, unique_samples] = particleFilter(x, P, y, u, PP, Ts);
 	tLast = t;
 	x_ = x;
 	xhat_ = xhat;
 	P_ = P;
 end
-function [x, xhat, P] = particleFilter(x, P, y, u, PP, Ts)
+function [x, xhat, P, errs, mahalDists, unique_samples] = particleFilter(x, P, y, u, PP, Ts)
+	unique_samples = 0;
+	mahalDists = 0;
+	errs = [0; 0];
 	% PREDICT
 	if Ts > 0
 		% predict using noise model
@@ -33,17 +36,40 @@ function [x, xhat, P] = particleFilter(x, P, y, u, PP, Ts)
 		end
 	end	
 	
-	% MEASUREMENT UPDATE	
+	% MEASUREMENT UPDATE
 	if any(any(~isnan(y)))
+		% find out mahalanobis distance away
+		% There might be a less hacky way to do this...
+		[xhat, P] = compute_covariance(x);
+		errs = [];
+		mahalDists = [];
+		R = diag([PP.sigma_r.^2, PP.sigma_phi.^2]);
+		for i = 1:size(PP.landmarks, 2)
+			if ~any(isnan(y(:, i)))
+				%yhat = measurement(xhat, 0, PP, i);
+				%R = diag([(y(1, i)*PP.alpha_r).^2, PP.sigma_phi.^2]);
+				[yhat, C] = h_dhdx(xhat, u, PP, i);
+				S = C*P*C' + R;
+				err = y(:, i) - yhat;
+				errs = [errs abs(err)];
+				mahalDist = sqrt(err'*inv(S)*err);
+				if(mahalDist > 10)
+					y(:, i) = nan;
+				end
+				mahalDists = [mahalDists sqrt(err'*inv(S)*err)];
+			end
+		end
+		errs = mean(errs, 2);
+		mahalDists = mean(mahalDists);
 
 		% calculate weights for each x_i using w_i = P(z | x_i).
 		n = size(x, 2);
 		w = zeros(n, 1);
-		R = diag([PP.sigma_r.^2, PP.sigma_phi.^2]);	
 		for i = 1:n
 			S = R; %is this right?
 			for j = 1:size(PP.landmarks, 2)
 				if ~any(isnan(y(:, j)))
+					%R = diag([(y(1, j)*PP.alpha_r).^2, PP.sigma_phi.^2]);
 					yhat = h(x(:, i), 0, PP, j);
 					d = size(x, 1);
 					mahalDistSqr = (y(:, j) - yhat)'*inv(S)*(y(:, j) - yhat);
@@ -74,11 +100,12 @@ function [x, xhat, P] = particleFilter(x, P, y, u, PP, Ts)
 			end
 		end
 		x = x(:, idxs);
+		unique_samples = length(unique(idxs));
 
 		% add noise to samples based on covariance of original distribution
 		% to ensure covariance doesn't become overconfident because the 
 		% sample density is too low
-		d = 3;
+		d = size(x, 1);
 		P_noise = P/n^(1/d);
 		noise = mvnrnd(zeros(3, 1)', P_noise, n)';
 		x = x + noise;
@@ -91,6 +118,19 @@ function [mean, covariance] = compute_covariance(x)
 	mean = sum(x, 2) / size(x, 2);
 	x_offset = x - mean;
 	covariance = x_offset*x_offset' / size(x, 2);
+end
+function [yhat, C] = h_dhdx(xhat, u, P, i)
+	[yhat, C] = numericalDiff(@(xhat) h(xhat, u, P, i), xhat);
+end
+function [fcn0, J] = numericalDiff(fcn, x)
+	h = .0001;
+	fcn0 = fcn(x);
+	J = zeros(length(fcn0), length(x));
+	for i = 1:length(x)
+		dx = zeros(size(x));
+		dx(i) = h;
+		J(:, i) = (fcn(x + dx) - fcn0) / h;
+	end
 end
 function xhatdot = f(xhat, u)
     theta = xhat(3);

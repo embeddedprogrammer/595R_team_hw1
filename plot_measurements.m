@@ -1,51 +1,42 @@
-function plot_states(xhat, P, t, rst)
-	x        = xhat(1);
-	y        = xhat(2);
-	theta    = 180/pi*xhat(3);
-	x_2sigma      = sqrt(P(1, 1))*2;
-	y_2sigma      = sqrt(P(2, 2))*2;
-	theta_2sigma  = 180/pi*sqrt(P(3, 3))*2;
-    
+function plot_measurements(t, rst, err, mahalDist, unique_samples)
 	% define persistent variables 
-	persistent x_handle y_handle theta_handle x2_handle y2_handle theta2_handle
+	persistent range_handle bearing_handle unique_handle mahal_handle
+	range_err = err(1);
+	bearing_err = err(2)*180/pi;
 
 	% first time function is called, initialize plot and persistent vars
 	if rst
 		% Create figure that remembers its position
-		if ishandle(2)
-			figure(2)
+		if ishandle(3)
+			figure(3)
 			clf
-		elseif evalin('base', 'exist(''plotWindowPos'')')
-			figure(2)
-			pos = evalin('base', 'plotWindowPos');
+		elseif evalin('base', 'exist(''plotWindowPos2'')')
+			figure(3)
+			pos = evalin('base', 'plotWindowPos2');
 			set(gcf, 'Position', pos);
 		else
-			figure(2)
+			figure(3)
 		end
 		set(gcf, 'CloseRequestFcn', @gcfClose);
 		
 		% Reset handle persistent vars
-		x_handle      = [];
-		y_handle      = [];
-		theta_handle  = [];
-		x2_handle      = [];
-		y2_handle      = [];
-		theta2_handle  = [];
+		range_handle  = [];
+		bearing_handle = [];
+		mahal_handle = [];
+		unique_handle = [];
 	end
 
 	% at every time step, redraw state variables
-	x_handle      = plot_w_bounds([3 2 1], t, x, x_2sigma, 'x', x_handle);
-	y_handle      = plot_w_bounds([3 2 3], t, y, y_2sigma, 'y', y_handle);
-	theta_handle  = plot_w_bounds([3 2 5], t, theta, theta_2sigma, '\theta', theta_handle);
-	x2_handle = plot_vars([3 2 2], t, [x_2sigma], 'x', x2_handle, {'r-.'});
-	y2_handle = plot_vars([3 2 4], t, [y_2sigma], 'y', y2_handle, {'r-.'});
-	theta2_handle = plot_vars([3 2 6], t, [theta_2sigma], '\theta', theta2_handle, {'r-.'});
+	range_handle = plot_vars([4 1 1], t, range_err, 'range', range_handle, {'r'});
+	bearing_handle = plot_vars([4 1 2], t, bearing_err, 'bearing', bearing_handle, {'r'});
+	mahal_handle = plot_vars([4 1 3], t, mahalDist, 'mahal', mahal_handle, {'r'});
+	unique_handle = plot_vars([4 1 4], t, unique_samples, 'unique', unique_handle, {'r'});
 end
 
 % Remember position when closed
 function gcfClose(~, ~)
 	pos = get(gcf, 'Position');
-	assignin('base', 'plotWindowPos', pos);
+	assignin('base', 'plotWindowPos2', pos);
 	delete(gcf);
 end
 

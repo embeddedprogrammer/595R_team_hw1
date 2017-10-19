@@ -5,8 +5,7 @@ function draw_unicycle(xx, rst, P)
 	theta   = xx(3);
 
 	% define persistent variables 
-	persistent circle_handle;
-	persistent line_handle;
+	persistent circle_handle line_handle history_handle;
 	r = .7;
 
 	% first time function is called, initialize plot and persistent vars
@@ -16,14 +15,16 @@ function draw_unicycle(xx, rst, P)
 		circle_handle = drawCircle(x, y, r, []);
 		hold on
 		line_handle = drawLine(x, y, theta, r, []);
+		history_handle = plot_var(x, y, 'r', []);
 		drawLandmarks(P.landmarks(1, :), P.landmarks(2, :))
 		grid on
 		axis([0 8 -4 20]);
 
-    % at every other time step, redraw spring and box
+    % at every other time step, redraw
 	else
-		circle_handle = drawCircle(x, y, r, circle_handle);
-		line_handle = drawLine(x, y, theta, r, line_handle);
+		drawCircle(x, y, r, circle_handle);
+		drawLine(x, y, theta, r, line_handle);
+		plot_var(x, y, 'r', history_handle);
 	end
 	drawnow	
 end
@@ -48,6 +49,14 @@ function handle = drawCircle(xc, yc, r, handle)
 		handle = plot(x, y, 'r');
 	else
 		set(handle, 'XData', x, 'YData', y);
+	end
+end
+function handle = plot_var(x, y, c, handle)
+	if isempty(handle)
+		handle = plot(x, y, c);
+	else
+		set(handle, 'Xdata', [get(handle, 'Xdata'), x]);
+		set(handle, 'Ydata', [get(handle, 'Ydata'), y]);
 	end
 end
 
